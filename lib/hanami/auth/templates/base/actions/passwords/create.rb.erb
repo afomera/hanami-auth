@@ -1,0 +1,21 @@
+# frozen_string_literal: true
+
+module <%= namespace %>
+  module Actions
+    module Passwords
+      class Create < <%= namespace %>::Action
+        allow_unauthenticated_access
+
+        include Deps["operations.request_password_reset"]
+
+        def handle(request, response)
+          request_password_reset.call(email_address: request.params[:email_address].to_s)
+
+          # The same response either way, so this form can't be used to discover accounts.
+          response.flash[:notice] = "Password reset instructions sent (if an account with that email address exists)."
+          response.redirect_to routes.path(:<%= route(:new_session) %>), status: 303
+        end
+      end
+    end
+  end
+end

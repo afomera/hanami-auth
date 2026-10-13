@@ -1,0 +1,34 @@
+# frozen_string_literal: true
+
+module <%= namespace %>
+  module Actions
+    module Passwords
+      class Update < <%= namespace %>::Action
+        allow_unauthenticated_access
+
+        include Deps["operations.reset_password", view: "views.passwords.edit"]
+
+        def handle(request, response)
+          result = reset_password.call(
+            token: request.params[:id].to_s,
+            password: request.params[:password].to_s,
+            password_confirmation: request.params[:password_confirmation].to_s
+          )
+
+          case result
+          in Success(_)
+            response.flash[:notice] = "Your password has been reset. Sign in with your new password."
+            response.redirect_to routes.path(:<%= route(:new_session) %>), status: 303
+          in Failure(:invalid_token)
+            response.flash[:alert] = "That password reset link is invalid or has expired."
+            response.redirect_to routes.path(:<%= route(:new_password) %>), status: 303
+          in Failure[:invalid_password, message]
+            response.flash.now[:alert] = message
+            response.status = 422
+            response.render(view, token: request.params[:id])
+          end
+        end
+      end
+    end
+  end
+end

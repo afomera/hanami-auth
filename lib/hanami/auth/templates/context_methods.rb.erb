@@ -1,0 +1,10 @@
+# The signed-in <%= model %>, as resolved by <%= namespace %>::Authentication for this request.
+def current_<%= model %>
+  return unless request?
+
+  request.env["<%= env_key %>"]&.<%= model %>
+end
+
+def authenticated?
+  !current_<%= model %>.nil?
+end

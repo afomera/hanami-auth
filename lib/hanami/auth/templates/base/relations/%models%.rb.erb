@@ -1,0 +1,13 @@
+# frozen_string_literal: true
+
+module <%= namespace %>
+  module Relations
+    class <%= models_class %> < <%= namespace %>::DB::Relation
+      schema :<%= models %>, infer: true do
+        associations do
+          has_many :<%= sessions_table %>
+        end
+      end
+    end
+  end
+end

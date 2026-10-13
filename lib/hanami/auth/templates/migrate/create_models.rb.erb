@@ -1,0 +1,15 @@
+# frozen_string_literal: true
+
+ROM::SQL.migration do
+  change do
+    create_table :<%= models %> do
+      primary_key :id
+      column :email_address, String, null: false
+      column :password_hash, String, null: false
+      column :created_at, DateTime, null: false, default: Sequel::CURRENT_TIMESTAMP
+      column :updated_at, DateTime, null: false, default: Sequel::CURRENT_TIMESTAMP
+
+      index :email_address, unique: true
+    end
+  end
+end

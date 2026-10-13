@@ -1,0 +1,17 @@
+<h1>Choose a new password</h1>
+
+<%% if flash[:alert] %><p role="alert"><%%= flash[:alert] %></p><%% end %>
+
+<%%= form_for routes.path(:<%= route(:password) %>, id: token), method: :patch do |f| %>
+  <p>
+    <label for="password">New password</label>
+    <%%= f.password_field "password", id: "password", required: true, autofocus: true, autocomplete: "new-password", minlength: 12 %>
+  </p>
+
+  <p>
+    <label for="password_confirmation">Confirm new password</label>
+    <%%= f.password_field "password_confirmation", id: "password_confirmation", required: true, autocomplete: "new-password" %>
+  </p>
+
+  <p><%%= f.submit "Save" %></p>
+<%% end %>

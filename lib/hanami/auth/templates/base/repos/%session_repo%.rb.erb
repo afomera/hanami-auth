@@ -1,0 +1,24 @@
+# frozen_string_literal: true
+
+module <%= namespace %>
+  module Repos
+    class <%= session_repo_class %> < <%= namespace %>::DB::Repo
+      def create(<%= foreign_key %>:, token_digest:, ip_address: nil, user_agent: nil)
+        <%= sessions_table %>.changeset(:create, <%= foreign_key %>:, token_digest:, ip_address:, user_agent:).commit
+      end
+
+      # Returns the session, combined with its <%= model %>.
+      def find_by_token_digest(token_digest)
+        <%= sessions_table %>.where(token_digest:).combine(:<%= model %>).one
+      end
+
+      def delete(id)
+        <%= sessions_table %>.by_pk(id).delete
+      end
+
+      def delete_all_for_<%= model %>(<%= foreign_key %>)
+        <%= sessions_table %>.where(<%= foreign_key %>:).delete
+      end
+    end
+  end
+end

@@ -1,0 +1,14 @@
+<h1>Forgot your password?</h1>
+
+<%% if flash[:alert] %><p role="alert"><%%= flash[:alert] %></p><%% end %>
+
+<%%= form_for routes.path(:<%= route(:passwords) %>) do |f| %>
+  <p>
+    <label for="email_address">Email address</label>
+    <%%= f.email_field "email_address", id: "email_address", required: true, autofocus: true, autocomplete: "username" %>
+  </p>
+
+  <p><%%= f.submit "Email reset instructions" %></p>
+<%% end %>
+
+<p><a href="<%%= routes.path(:<%= route(:new_session) %>) %>">Back to sign in</a></p>

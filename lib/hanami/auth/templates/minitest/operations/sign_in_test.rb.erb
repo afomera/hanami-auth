@@ -1,0 +1,30 @@
+# frozen_string_literal: true
+
+require "test_helper"
+
+class <%= test_class_prefix %>SignInTest < Hanami::Minitest::Test
+  include TestSupport::DB
+
+  PASSWORD = "correct horse battery staple"
+
+  def setup
+    super
+    @<%= model %> = <%= container %>["repos.<%= model %>_repo"].create(email_address: "someone@example.com", password: PASSWORD)
+  end
+
+  test "returns the <%= model %> for the right email address and password" do
+    result = sign_in.call(email_address: " Someone@Example.com ", password: PASSWORD)
+
+    assert_equal @<%= model %>.id, result.value!.id
+  end
+
+  test "fails the same way for a wrong password and an unknown email address" do
+    assert_equal :invalid_credentials, sign_in.call(email_address: "someone@example.com", password: "wrong").failure
+    assert_equal :invalid_credentials, sign_in.call(email_address: "nobody@example.com", password: PASSWORD).failure
+    assert_equal :invalid_credentials, sign_in.call(email_address: "", password: "").failure
+  end
+
+  private
+
+  def sign_in = <%= container %>["operations.sign_in"]
+end

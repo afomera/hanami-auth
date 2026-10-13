@@ -1,0 +1,88 @@
+# frozen_string_literal: true
+
+require "test_helper"
+
+class <%= test_class_prefix %>AuthenticationTest < RequestTest
+  include TestSupport::DB
+  include TestSupport::Mailers
+
+  PASSWORD = "correct horse battery staple"
+
+  def setup
+    super
+    @<%= model %> = <%= model %>_repo.create(email_address: "Someone@Example.com ", password: PASSWORD)
+  end
+
+  test "signs in with the right email and password" do
+    sign_in_as(@<%= model %>, password: PASSWORD<%= sign_in_args %>)
+
+    assert_equal 303, last_response.status
+    assert_equal "/", last_response.location
+    assert signed_in?
+  end
+
+  test "rejects the wrong password without revealing whether the account exists" do
+    sign_in_as(@<%= model %>, password: "wrong password"<%= sign_in_args %>)
+    wrong_password = last_response
+
+    sign_in_as(Struct.new(:email_address).new("nobody@example.com"), password: PASSWORD<%= sign_in_args %>)
+
+    assert_equal 422, wrong_password.status
+    assert_equal 422, last_response.status
+    assert_includes last_response.body, "Try another email address or password."
+    refute signed_in?
+  end
+
+  test "requires a signed-in <%= model %> for protected actions" do
+    delete "<%= session_path %>"
+
+    assert_equal 303, last_response.status
+    assert_equal "<%= sign_in_path %>", last_response.location
+  end
+
+  test "signs out" do
+    sign_in_as(@<%= model %>, password: PASSWORD<%= sign_in_args %>)
+    delete "<%= session_path %>"
+
+    assert_equal 303, last_response.status
+    refute signed_in?
+  end
+
+  test "resets the password with an emailed link, which works only once" do
+    post "<%= passwords_path %>", email_address: "someone@example.com"
+
+    assert_equal 303, last_response.status
+    assert_equal 1, deliveries.size
+
+    reset_path = URI(deliveries.last.message.text_body[%r{https?://\S+}]).path
+    get reset_path
+    assert_equal 200, last_response.status
+
+    patch reset_path.delete_suffix("/edit"), password: "a brand new password", password_confirmation: "a brand new password"
+    assert_equal 303, last_response.status
+
+    sign_in_as(@<%= model %>, password: "a brand new password"<%= sign_in_args %>)
+    assert signed_in?
+
+    get reset_path
+    assert_equal 302, last_response.status
+  end
+
+  test "doesn't send email for unknown addresses" do
+    post "<%= passwords_path %>", email_address: "nobody@example.com"
+
+    assert_equal 303, last_response.status
+    assert_empty deliveries
+  end
+
+  private
+
+  def <%= model %>_repo = <%= container %>["repos.<%= model %>_repo"]
+
+  def deliveries = <%= container %>["mailers.delivery_method"].deliveries
+
+  def signed_in?
+    get "<%= sign_in_path %>"
+    last_response.status == 302
+  end
+end

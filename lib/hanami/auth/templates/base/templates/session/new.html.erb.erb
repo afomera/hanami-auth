@@ -1,0 +1,29 @@
+<%- if turbo? -%>
+<%%# When a Turbo Frame request is redirected here (say, by an expired session), have Turbo load the
+    whole page rather than fail with "Content missing". Only for frame requests: on ordinary visits this
+    meta would make Turbo load the page twice, losing the flash. %>
+<%% if request.turbo_frame? %>
+  <%%= content_for :head do %><meta name="turbo-visit-control" content="reload"><%% end %>
+<%% end %>
+
+<%- end -%>
+<h1>Sign in</h1>
+
+<%% if flash[:alert] %><p role="alert"><%%= flash[:alert] %></p><%% end %>
+<%% if flash[:notice] %><p role="status"><%%= flash[:notice] %></p><%% end %>
+
+<%%= form_for routes.path(:<%= route(:session) %>) do |f| %>
+  <p>
+    <label for="email_address">Email address</label>
+    <%%= f.email_field "email_address", id: "email_address", required: true, autofocus: true, autocomplete: "username" %>
+  </p>
+
+  <p>
+    <label for="password">Password</label>
+    <%%= f.password_field "password", id: "password", required: true, autocomplete: "current-password" %>
+  </p>
+
+  <p><%%= f.submit "Sign in" %></p>
+<%% end %>
+
+<p><a href="<%%= routes.path(:<%= route(:new_password) %>) %>">Forgot your password?</a></p>

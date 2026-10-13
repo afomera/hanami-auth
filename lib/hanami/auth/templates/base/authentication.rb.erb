@@ -1,0 +1,104 @@
+# auto_register: false
+# frozen_string_literal: true
+
+require "digest"
+require "securerandom"
+
+module <%= namespace %>
+  # Session-based authentication for actions. Included into <%= namespace %>::Action, so every action
+  # requires a signed-in <%= model %> unless it calls `allow_unauthenticated_access`.
+  #
+  # The Rack session (a signed, encrypted cookie) holds a random token. The database stores only the
+  # token's SHA-256 digest in the <%= sessions_table %> table, so sessions can be listed and revoked.
+  module Authentication
+    SESSION_KEY = :session_token
+    ENV_KEY = "<%= env_key %>"
+
+    def self.included(action_class)
+      super
+
+      action_class.include Deps[auth_session_repo: "repos.<%= session_repo %>"]
+      action_class.extend ClassMethods
+      action_class.before :resume_session
+      action_class.before :require_authentication
+    end
+
+    module ClassMethods
+      # Lets signed-out visitors use this action (and its subclasses).
+      def allow_unauthenticated_access
+        @allow_unauthenticated_access = true
+      end
+
+      def allow_unauthenticated_access?
+        return @allow_unauthenticated_access if instance_variable_defined?(:@allow_unauthenticated_access)
+
+        superclass.respond_to?(:allow_unauthenticated_access?) && superclass.allow_unauthenticated_access?
+      end
+    end
+
+    private
+
+    def current_session(request)
+      request.env[ENV_KEY]
+    end
+
+    def current_<%= model %>(request)
+      current_session(request)&.<%= model %>
+    end
+
+    def authenticated?(request)
+      !current_<%= model %>(request).nil?
+    end
+
+    def resume_session(request, _response)
+      token = request.session[SESSION_KEY]
+      return unless token.is_a?(String)
+
+      request.env[ENV_KEY] = auth_session_repo.find_by_token_digest(digest_token(token))
+    end
+
+    def require_authentication(request, response)
+      return if self.class.allow_unauthenticated_access? || authenticated?(request)
+
+      request.session[:return_to] = request.fullpath if request.get?
+      response.flash[:alert] = "Sign in to continue."
+      # 303 after a non-GET request, so the browser (and Turbo) follows up with a GET.
+      response.redirect_to routes.path(:<%= route(:new_session) %>), status: request.get? ? 302 : 303
+    end
+
+    def start_new_session_for(request, <%= model %>)
+      return_to = request.session[:return_to]
+
+      # Start from a fresh Rack session, so a session fixed before sign in can't be reused after it.
+      request.session.clear
+      request.session[:return_to] = return_to if return_to
+
+      token = SecureRandom.urlsafe_base64(32)
+      request.env[ENV_KEY] = auth_session_repo.create(
+        <%= foreign_key %>: <%= model %>.id,
+        token_digest: digest_token(token),
+        ip_address: request.ip,
+        user_agent: request.get_header("HTTP_USER_AGENT")&.slice(0, 255)
+      )
+      request.session[SESSION_KEY] = token
+    end
+
+    def terminate_session(request)
+      if (session = current_session(request))
+        auth_session_repo.delete(session.id)
+      end
+
+      request.env.delete(ENV_KEY)
+      request.session.clear
+    end
+
+    def after_authentication_url(request)
+      return_to = request.session.delete(:return_to)
+      return_to.is_a?(String) && return_to.start_with?("/") && !return_to.start_with?("//") ? return_to : "/"
+    end
+
+    def digest_token(token)
+      Digest::SHA256.hexdigest(token)
+    end
+  end
+end

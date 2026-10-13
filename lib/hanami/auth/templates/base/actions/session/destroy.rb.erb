@@ -1,0 +1,15 @@
+# frozen_string_literal: true
+
+module <%= namespace %>
+  module Actions
+    module Session
+      class Destroy < <%= namespace %>::Action
+        def handle(request, response)
+          terminate_session(request)
+          response.flash[:notice] = "Signed out."
+          response.redirect_to routes.path(:<%= route(:new_session) %>), status: 303
+        end
+      end
+    end
+  end
+end

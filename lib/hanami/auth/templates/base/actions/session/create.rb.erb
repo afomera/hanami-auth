@@ -1,0 +1,31 @@
+# frozen_string_literal: true
+
+module <%= namespace %>
+  module Actions
+    module Session
+      class Create < <%= namespace %>::Action
+        allow_unauthenticated_access
+
+        include Deps["operations.sign_in", view: "views.session.new"]
+
+        def handle(request, response)
+          result = sign_in.call(
+            email_address: request.params[:email_address].to_s,
+            password: request.params[:password].to_s
+          )
+
+          case result
+          in Success(<%= model %>)
+            start_new_session_for(request, <%= model %>)
+            response.flash[:notice] = "Signed in."
+            response.redirect_to after_authentication_url(request), status: 303
+          in Failure(:invalid_credentials)
+            response.flash.now[:alert] = "Try another email address or password."
+            response.status = 422
+            response.render(view)
+          end
+        end
+      end
+    end
+  end
+end

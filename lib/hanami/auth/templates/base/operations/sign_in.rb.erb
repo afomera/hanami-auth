@@ -1,0 +1,28 @@
+# frozen_string_literal: true
+
+module <%= namespace %>
+  module Operations
+    # Finds the <%= model %> for an email address and password.
+    class SignIn < <%= namespace %>::Operation
+      include Deps["repos.<%= model %>_repo", "authentication.passwords"]
+
+      def call(email_address:, password:)
+        step authenticate(email_address, password)
+      end
+
+      private
+
+      def authenticate(email_address, password)
+        <%= model %> = <%= model %>_repo.find_by_email(email_address)
+
+        # Verify even when no account matched (against a dummy hash), so response times don't reveal
+        # which email addresses have accounts.
+        if passwords.verify(password, <%= model %>&.password_hash) && <%= model %>
+          Success(<%= model %>)
+        else
+          Failure(:invalid_credentials)
+        end
+      end
+    end
+  end
+end
